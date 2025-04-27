@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+model roles {
+  id         Int          @id @default(autoincrement())
+  value      String       @unique @default("user") @db.VarChar(255)
+  user_roles user_roles[]
+}
+
+model user_roles {
+  user_id Int
+  role_id Int
+  roles   roles @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users   users @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, role_id])
+}
+
+model users {
+  id             Int          @id @default(autoincrement())
+  username       String       @db.VarChar(255)
+  email          String       @unique @db.VarChar(255)
+  password       String       @db.VarChar(255)
+  user_roles     user_roles[]
+  isActive       Boolean      @default(false)
+  profilePicture String?      @db.VarChar(255)
+  bio            String?      @db.VarChar(255)
+  phone          String?      @db.VarChar(255)
+  location       String?      @db.VarChar(255)
+  age            Int?
+  skills         String[]     @default([])
+  messages       Message[]    @relation("receivedMessages")
+  sentMessages   Message[]    @relation("sentMessages")
+  passwordResetTokens PasswordResetToken[]
+  userFriendships Friendship[] @relation("userFriendships")
+  friendFriendships Friendship[] @relation("friendFriendships")
+  posts          Post[]       @relation("UserPosts")
+  experiences    Experience[]
+  likes          Like[]
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  content    String
+  createdAt  DateTime @default(now())
+  sender     users    @relation("sentMessages", fields: [senderId], references: [id])
+  receiver   users    @relation("receivedMessages", fields: [receiverId], references: [id])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  expiresAt DateTime
+  user      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Friendship {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  friendId  Int
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      users    @relation("userFriendships", fields: [userId], references: [id])
+  friend    users    @relation("friendFriendships", fields: [friendId], references: [id])
+
+  @@unique([userId, friendId])
+}
+
+model Post {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String
+  imageUrls    String[] @default([])
+  bedrooms     Int?
+  bathrooms    Int?
+  squareMeters Int?
+  price        Float
+  location     String
+  address      String?  // Новое поле
+  propertyType String?  // Новое поле (например, "apartment", "house", "villa")
+  yearBuilt    Int?     // Новое поле
+  authorId     Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  author       users    @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  likes        Like[]
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  userId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model Experience {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  position    String
+  company     String
+  location    String
+  startDate   String
+  endDate     String
+  description String
+  user        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
